@@ -52,12 +52,6 @@ public class Login {
         return passwordEncoder.encode(password);
     }
 
-    @GetMapping(value = "/get-user-info", produces = "application/json")
-    public ResponseEntity<Object> getBasicUserInfo(@RequestParam(value = "uids") String[] uids, HttpSession session) {
-        List<User> result = userRepo.findByIds(uids);
-        return new ResponseEntity<Object>(result, HttpStatus.OK);
-    }
-
     @GetMapping(value = "/check-credentials", produces = "application/json")
     public ResponseEntity<Object> checkCredentials(@RequestParam(value = "username") String username, @RequestParam(value = "password") String password, HttpSession session) {
         List<User> result = userRepo.findByUsername(username);
