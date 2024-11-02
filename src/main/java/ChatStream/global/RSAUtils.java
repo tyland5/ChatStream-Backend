@@ -1,5 +1,4 @@
-package ChatStream;
-import org.springframework.beans.factory.annotation.Value;
+package ChatStream.global;
 
 import javax.crypto.Cipher;
 import java.security.KeyFactory;

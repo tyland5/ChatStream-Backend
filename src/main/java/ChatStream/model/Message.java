@@ -14,22 +14,25 @@ public class Message {
     public String sender;
     public String message;
     public Date sentAt;
+    public String media;
 
     public Message(){}
 
-    public Message(String chatId, String sender, String message, Date sentAt){
+    public Message(String chatId, String sender, String message, Date sentAt, String media){
         this.chatId = chatId;
         this.sender = sender;
         this.message = message;
         this.sentAt = sentAt;
+        this.media = media;
     }
 
-    public Message(String id, String chatId, String sender, String message, Date sentAt){
+    public Message(String id, String chatId, String sender, String message, Date sentAt, String media){
         this.id = id;
         this.chatId = chatId;
         this.sender = sender;
         this.message = message;
         this.sentAt = sentAt;
+        this.media = media;
     }
 
     public String getMessage() {
@@ -54,5 +57,9 @@ public class Message {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getMedia() {
+        return this.media;
     }
 }

@@ -14,12 +14,19 @@ public class User {
     private String pfp;
     private String password;
 
+    public User(){}
+
     public User(String username, String name, String pfp, String password) {
-        super();
         this.username = username;
         this.name = name;
         this.pfp = pfp;
         this.password = password;
+    }
+
+    public User(String username, String name, String pfp) {
+        this.username = username;
+        this.name = name;
+        this.pfp = pfp;
     }
 
     public String getId(){

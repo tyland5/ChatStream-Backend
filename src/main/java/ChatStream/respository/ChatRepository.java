@@ -15,7 +15,10 @@ public interface ChatRepository extends MongoRepository<Chat, String>{
     @Query(value = "{members:'?0'}", sort="{lastUpdated:-1}")
     List<Chat> findByMemberId(String id);
 
+    @Query(value="{_id:'?0'}")
+    List<Chat> findByChatId(String chatId);
+
     @Query("{'_id' : ?0}")
-    @Update("{'$set': {'latestMessage.uid': '?1', 'latestMessage.message': '?2', lastUpdated: ?3}}")
-    Integer updateLatestMessage(String id, String uid, String message, Date lastUpdated);
+    @Update("{'$set': {'latestMessage.uid': '?1', 'latestMessage.message': '?2', 'latestMessage.messageId': '?3', lastUpdated: ?4}}")
+    Integer updateLatestMessage(String id, String uid, String message, String messageId, Date lastUpdated);
 }

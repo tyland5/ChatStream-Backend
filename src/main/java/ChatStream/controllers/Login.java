@@ -19,10 +19,16 @@ import java.util.List;
 class LoginReturnedJson{
     String csrf;
     String uid;
+    String pfp;
+    String username;
+    String name;
 
-    public LoginReturnedJson(String csrf, String uid){
+    public LoginReturnedJson(String csrf, String uid, String pfp, String username, String name){
         this.csrf = csrf;
         this.uid = uid;
+        this.pfp = pfp;
+        this.username = username;
+        this.name = name;
     }
 
     // I NEED THIS OR ELSE I GET
@@ -34,6 +40,18 @@ class LoginReturnedJson{
 
     public String getUid() {
         return this.uid;
+    }
+
+    public String getUsername(){
+        return this.username;
+    }
+
+    public String getPfp(){
+        return this.pfp;
+    }
+
+    public String getName(){
+        return this.name;
     }
 }
 
@@ -73,7 +91,9 @@ public class Login {
 
             session.setAttribute("csrf", randomLetters);
 
-            LoginReturnedJson json = new LoginReturnedJson(randomLetters, result.getFirst().getId());
+            User user = result.getFirst();
+
+            LoginReturnedJson json = new LoginReturnedJson(randomLetters, result.getFirst().getId(), user.getPfp(), user.getUsername(), user.getName());
             return new ResponseEntity<Object>(json, headers, HttpStatus.OK);
         }
         else {

@@ -1,6 +1,7 @@
 package ChatStream.controllers;
 
-import ChatStream.RSAUtils;
+import ChatStream.global.MediaUtils;
+import ChatStream.global.RSAUtils;
 import ChatStream.model.Chat;
 import ChatStream.respository.ChatRepository;
 import ChatStream.model.Message;
@@ -15,7 +16,11 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.web.bind.annotation.*;
 import ChatStream.model.LatestMessage;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 
@@ -25,15 +30,34 @@ class MessageResponse{
     public String sender;
     public String message;
     public long sentAt;
+    public String type; // edit, delete, create
+    public String media;
+    public String mediaName;
 
     public MessageResponse(){}
 
-    public MessageResponse(String id, String chatId, String sender, String message, long sentAt){
+    public MessageResponse(String id, String chatId, String sender, String message, long sentAt, String type){
         this.id = id;
         this.chatId = chatId;
         this.sender = sender;
         this.message = message;
         this.sentAt = sentAt;
+        this.type = type;
+    }
+
+    public MessageResponse(String id, String chatId, String sender, String message, long sentAt, String type, String media, String mediaName){
+        this.id = id;
+        this.chatId = chatId;
+        this.sender = sender;
+        this.message = message;
+        this.sentAt = sentAt;
+        this.type = type;
+        this.media = media;
+        this.mediaName = mediaName;
+    }
+
+    public String getId(){
+        return this.id;
     }
 
     public String getChatId() {
@@ -46,6 +70,18 @@ class MessageResponse{
 
     public String getSender(){
         return this.sender;
+    }
+
+    public String getType() {
+        return this.type;
+    }
+
+    public String getMedia(){
+        return this.media;
+    }
+
+    public String getMediaName(){
+        return this.mediaName;
     }
 }
 
@@ -136,31 +172,88 @@ public class ChatPage{
     }
 
 
-    @MessageMapping("/chat/sendChat/{chatId}") // Map incoming messages to /chat/sendChat/{chatId}
+
+    @MessageMapping("/chat/updateChat/{chatId}") // Map incoming messages to /chat/sendChat/{chatId}
     @SendTo("/chat/{chatId}") // Send messages to subscribers of /chat/{chatId}
-    MessageResponse newMessage(@RequestBody MessageResponse messageObj) { //@RequestHeader("csrf") String csrf, HttpSession session
+    MessageResponse updateMessages(@RequestBody MessageResponse messageObj) throws Exception { //@RequestHeader("csrf") String csrf, HttpSession session
+        String id = messageObj.getId();
         String message = messageObj.getMessage();
         String sender = messageObj.getSender();
         String chatId = messageObj.getChatId();
         Date sentAt = new Date();
-        String encryptedMessage = "";
+        String type = messageObj.getType();
+        String mediaName = messageObj.getMediaName();
 
-        /*
-        if(!csrf.equals(session.getAttribute("csrf"))){
-            return new Message();
+        if(type.equals("delete")) {
+            // first delete media
+            if(!mediaName.isEmpty()){
+                MediaUtils.deleteLocal(mediaName);
+            }
+
+            messageRepo.deleteByMessageId(id);
+            Chat chat = chatRepo.findByChatId(chatId).getFirst();
+
+            // if latest message deleted
+            if(chat.getLatestMessage().getMessageId().equals(id)){
+                chatRepo.updateLatestMessage(chatId, chat.getLatestMessage().getUid(), "Message Deleted", id, sentAt);
+            }
+
+            return new MessageResponse(id, chatId, "", "", 0, type);
         }
-        */
 
-        try{
-            encryptedMessage = RSAUtils.encrypt(message, this.publicKey);
-        } catch (Exception e) {
-            return new MessageResponse();
+        if(type.equals("edit")){
+            String encryptedMessage = "";
+
+            try{
+                encryptedMessage = RSAUtils.encrypt(message, this.publicKey);
+            } catch (Exception e) {
+                return new MessageResponse();
+            }
+
+            messageRepo.editByMessageId(id, encryptedMessage);
+            Chat chat = chatRepo.findByChatId(chatId).getFirst();
+
+            // if latest message edited
+            if(chat.getLatestMessage().getMessageId().equals(id)){
+                chatRepo.updateLatestMessage(chatId, chat.getLatestMessage().getUid(), message, id, sentAt);
+            }
+
+            return new MessageResponse(id, chatId, "", message, 0, type);
         }
 
-        String messageId = messageRepo.save(new Message(chatId, sender, encryptedMessage, sentAt)).getId();
-        chatRepo.updateLatestMessage(chatId, sender, message, sentAt);
+        // when you do create message, you already inserted into db, so just broadcast input here
+        return new MessageResponse(id, chatId, sender, message, sentAt.getTime(), type, mediaName, "");
+    }
 
-        return new MessageResponse(messageId, chatId, sender, message, sentAt.getTime());
+
+    @PostMapping("/create-new-message")
+    ResponseEntity<MessageResponse> createNewMessage(@RequestBody MessageResponse messageObj) throws Exception { //@RequestHeader("csrf") String csrf, HttpSession session
+        String id = messageObj.getId();
+        String message = messageObj.getMessage();
+        String sender = messageObj.getSender();
+        String chatId = messageObj.getChatId();
+        Date sentAt = new Date();
+        String encryptedMessage = message;
+        String media = messageObj.getMedia();
+        String mediaName = messageObj.getMediaName();
+
+        if(!message.isEmpty()) {
+            try{
+                encryptedMessage = RSAUtils.encrypt(message, this.publicKey);
+            } catch (Exception e) {
+                return new ResponseEntity<MessageResponse>(new MessageResponse(), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        }
+
+        if(!media.isBlank()) {
+            mediaName = MediaUtils.uploadLocal(media, mediaName);
+        }
+
+        String messageId = messageRepo.save(new Message(chatId, sender, encryptedMessage, sentAt, mediaName)).getId();
+        chatRepo.updateLatestMessage(chatId, sender, message, messageId, sentAt); // will also need to modify this
+
+        return new ResponseEntity<MessageResponse>(new MessageResponse(messageId, chatId, sender, message, sentAt.getTime(), "create", "", mediaName),
+                HttpStatus.OK);
     }
 
     @PostMapping("/create-chat")
@@ -190,8 +283,12 @@ public class ChatPage{
 
         // all msgs in db are encrypted, so need to decrypt before giving back to user
         for(int index = 0; index < messages.size(); index++){
+            Message msg = messages.get(index);
+            if(msg.message.isBlank()){
+                continue;
+            }
+
             try{
-                Message msg = messages.get(index);
                 msg.setMessage(RSAUtils.decrypt(msg.getMessage(), this.privateKey));
             } catch (Exception e) {
                 return new ResponseEntity<Object>(null, HttpStatus.INTERNAL_SERVER_ERROR);
