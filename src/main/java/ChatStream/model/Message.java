@@ -3,6 +3,8 @@ package ChatStream.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.Date;
+
 @Document("messages")
 public class Message {
     @Id
@@ -11,15 +13,26 @@ public class Message {
     public String chatId;
     public String sender;
     public String message;
-    public String sentAt;
+    public Date sentAt;
+    public String media;
 
     public Message(){}
 
-    public Message(String chatId, String sender, String message, String sentAt){
+    public Message(String chatId, String sender, String message, Date sentAt, String media){
         this.chatId = chatId;
         this.sender = sender;
         this.message = message;
         this.sentAt = sentAt;
+        this.media = media;
+    }
+
+    public Message(String id, String chatId, String sender, String message, Date sentAt, String media){
+        this.id = id;
+        this.chatId = chatId;
+        this.sender = sender;
+        this.message = message;
+        this.sentAt = sentAt;
+        this.media = media;
     }
 
     public String getMessage() {
@@ -38,11 +51,15 @@ public class Message {
         return this.sender;
     }
 
-    public String getSentAt() {
+    public Date getSentAt() {
         return this.sentAt;
     }
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getMedia() {
+        return this.media;
     }
 }

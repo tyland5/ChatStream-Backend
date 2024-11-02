@@ -5,27 +5,8 @@ import org.springframework.data.annotation.PersistenceConstructor;
 import org.springframework.data.annotation.PersistenceCreator;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.Date;
 import java.util.List;
-
-/*
-class LatestMessage{
-    private String uid;
-    private String message;
-
-    public LatestMessage(String uid, String message){
-        this.uid = uid;
-        this.message = message;
-    }
-
-    public String getMessage() {
-        return this.message;
-    }
-
-    public String getUid() {
-        return this.uid;
-    }
-}
-*/
 
 
 @Document("chats")
@@ -37,28 +18,27 @@ public class Chat {
 
     private String chatName;
     private String chatPic;
-    private Object latestMessage;
+    private LatestMessage latestMessage;
+    private Date lastUpdated;
 
     public Chat(){}
 
-    /*
-    // 2 person chat
-    public Chat(List<String> members, Object latestMessage) {
-        super();
-        this.members = members;
-        this.latestMessage = latestMessage;
-    }
-
-    // group chat
-    @PersistenceCreator
-    public Chat(List<String> members, String chatName, String chatPic, Object latestMessage){
-        super();
+    public Chat(String id, List<String> members, String chatName, String chatPic, LatestMessage latestMessage, Date lastUpdated){
+        this.id = id;
         this.members = members;
         this.chatName = chatName;
         this.chatPic = chatPic;
         this.latestMessage = latestMessage;
+        this.lastUpdated = lastUpdated;
     }
-    */
+
+    public Chat(List<String> members, String chatName, String chatPic, LatestMessage latestMessage, Date lastUpdated){
+        this.members = members;
+        this.chatName = chatName;
+        this.chatPic = chatPic;
+        this.latestMessage = latestMessage;
+        this.lastUpdated = lastUpdated;
+    }
 
 
     public String getId(){
@@ -77,7 +57,11 @@ public class Chat {
         return this.chatPic;
     }
 
-    public Object getLatestMessage() {
+    public LatestMessage getLatestMessage() {
         return this.latestMessage;
+    }
+
+    public Date getLastUpdated(){
+        return this.lastUpdated;
     }
 }
