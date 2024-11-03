@@ -1,11 +1,15 @@
 package ChatStream.controllers;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -70,8 +74,24 @@ public class Login {
         return passwordEncoder.encode(password);
     }
 
+    @GetMapping("/check-logged-in")
+    public boolean checkLoggedIn(HttpServletRequest request){
+        return !(request.getSession(false) == null); // this is accurate. checks if mongodb has your session
+    }
+
+    @DeleteMapping("/logout")
+    public boolean logOut(HttpServletRequest request){
+        HttpSession session = request.getSession(false);
+
+        if(session != null){
+            session.invalidate();
+        }
+
+        return true;
+    }
+
     @GetMapping(value = "/check-credentials", produces = "application/json")
-    public ResponseEntity<Object> checkCredentials(@RequestParam(value = "username") String username, @RequestParam(value = "password") String password, HttpSession session) {
+    public ResponseEntity<Object> checkCredentials(@RequestParam(value = "username") String username, @RequestParam(value = "password") String password, HttpSession session, HttpServletResponse response) {
         List<User> result = userRepo.findByUsername(username);
         HttpHeaders headers = new HttpHeaders();
 
@@ -90,6 +110,8 @@ public class Login {
             String randomLetters = generator.generate(16);
 
             session.setAttribute("csrf", randomLetters);
+
+            session.setMaxInactiveInterval(86400); // if user inactive for more than day, db deletes the session
 
             User user = result.getFirst();
 
