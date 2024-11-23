@@ -1,23 +1,18 @@
 package ChatStream.controllers;
 
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import ChatStream.model.User;
 import ChatStream.respository.UserRepository;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.apache.commons.text.RandomStringGenerator;
+
 import java.util.List;
 
 class LoginReturnedJson{
@@ -67,12 +62,6 @@ public class Login {
     // https://stackoverflow.com/questions/42907553/field-required-a-bean-of-type-that-could-not-be-found-error-spring-restful-ap
     @Autowired
     UserRepository userRepo;
-
-
-    public String hashPassword(String password) {
-        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        return passwordEncoder.encode(password);
-    }
 
     @GetMapping("/check-logged-in")
     public boolean checkLoggedIn(HttpServletRequest request){

@@ -13,14 +13,16 @@ public class User {
     private String name;
     private String pfp;
     private String password;
+    private String email;
 
     public User(){}
 
-    public User(String username, String name, String pfp, String password) {
+    public User(String username, String name, String pfp, String password, String email) {
         this.username = username;
         this.name = name;
         this.pfp = pfp;
         this.password = password;
+        this.email = email;
     }
 
     public User(String username, String name, String pfp) {
@@ -47,5 +49,9 @@ public class User {
 
     public String getPfp(){
         return this.pfp;
+    }
+
+    public String getEmail(){
+        return this.email;
     }
 }

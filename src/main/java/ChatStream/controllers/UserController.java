@@ -1,15 +1,18 @@
 package ChatStream.controllers;
 
+import ChatStream.controllerObjects.ForgotPWObj;
 import ChatStream.controllerObjects.NewUserInfo;
 import ChatStream.global.MediaUtils;
 import ChatStream.model.Friend;
 import ChatStream.model.User;
 import ChatStream.respository.FriendRepository;
 import ChatStream.respository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -25,6 +28,10 @@ public class UserController {
     @Autowired
     UserRepository userRepo;
 
+    public String hashPassword(String password) {
+        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        return passwordEncoder.encode(password);
+    }
 
     @GetMapping(value = "/get-user-info", produces = "application/json")
     public ResponseEntity<Object> getBasicUserInfo(@RequestParam(value = "uids") String[] uids, HttpSession session) {
@@ -48,17 +55,38 @@ public class UserController {
     }
 
     @GetMapping("/check-username-available")
-    ResponseEntity<Map<String, Boolean>> checkUsernameAvailable(@RequestParam(value="username") String username, HttpSession session){
+    ResponseEntity<Map<String, Boolean>> checkUsernameAvailable(@RequestParam(value="username") String username, HttpServletRequest request){
         List<User> user = userRepo.findByUsername(username);
         if(user.isEmpty()){
             return new ResponseEntity<>(Collections.singletonMap("available", true), HttpStatus.OK);
         }
 
-        if(!user.getFirst().getId().equals(session.getAttribute("uid").toString())){
+        HttpSession session = request.getSession(false);
+
+        // if the in use username doesn't belong to the current user, then not available
+        if(session == null || !user.getFirst().getId().equals(session.getAttribute("uid").toString())){
             return new ResponseEntity<>(Collections.singletonMap("available", false), HttpStatus.OK);
         }
 
         return new ResponseEntity<>(Collections.singletonMap("available", true), HttpStatus.OK);
+    }
+
+    @GetMapping("/check-email-used")
+    ResponseEntity<Map<String, Boolean>> checkIfEmailInUse(@RequestParam(value="email") String email){
+        List<User> users = userRepo.findByEmail(email);
+        boolean isAvailable = users.isEmpty();
+        return new ResponseEntity<>(Collections.singletonMap("available", isAvailable), HttpStatus.OK);
+    }
+
+    @PostMapping("/create-user")
+    ResponseEntity<Map<String, Boolean>> createUser(@RequestBody User user){
+        String username = user.getUsername();
+        String name = user.getName();
+        String password = user.getPassword();
+        String email = user.getEmail();
+
+        userRepo.save(new User(username, name, "", hashPassword(password), email));
+        return new ResponseEntity<>(Collections.singletonMap("inserted", true), HttpStatus.OK);
     }
 
     @PutMapping("/update-profile")
@@ -79,6 +107,16 @@ public class UserController {
         userRepo.updateProfile(session.getAttribute("uid").toString(), new_username, new_name);
 
         return new ResponseEntity<>(Collections.singletonMap("inserted", "true"), HttpStatus.OK);
+
+    }
+
+    @PutMapping("/change-password")
+    ResponseEntity<Map<String, String>> updateProfileInfo(@RequestBody ForgotPWObj obj) {
+        String email = obj.getEmail();
+        String password = obj.getPassword();
+
+        userRepo.updatePasswordByEmail(email, hashPassword(password));
+        return new ResponseEntity<>(Collections.singletonMap("updated", "true"), HttpStatus.OK);
 
     }
 
