@@ -9,11 +9,13 @@ public class NewUserInfo {
 
     public NewUserInfo(){}
 
+    // update profile without pfp
     public NewUserInfo(String username, String name) {
         this.username = username;
         this.name = name;
     }
 
+    // update profile without pfp
     public NewUserInfo(String username, String name, String oldPfp, String newPfp, String newPfpName){
         this.username = username;
         this.name = name;
