@@ -2,6 +2,7 @@ package ChatStream.controllers;
 
 import ChatStream.controllerObjects.ForgotPWObj;
 import ChatStream.controllerObjects.NewUserInfo;
+import ChatStream.controllerObjects.UidObj;
 import ChatStream.global.MediaUtils;
 import ChatStream.model.Friend;
 import ChatStream.model.User;
@@ -33,25 +34,98 @@ public class UserController {
         return passwordEncoder.encode(password);
     }
 
+    public String[] extractFriendId(List<Friend> friends, String uid){
+        return friends.stream().map(friend -> {
+            if(friend.getUser1().equals(uid)){
+                return friend.getUser2();
+            }
+            return friend.getUser1();
+        }).toList().toArray(new String[friends.size()]);
+    }
+
     @GetMapping(value = "/get-user-info", produces = "application/json")
     public ResponseEntity<Object> getBasicUserInfo(@RequestParam(value = "uids") String[] uids, HttpSession session) {
         List<User> result = userRepo.findByIds(uids);
         return new ResponseEntity<Object>(result, HttpStatus.OK);
     }
 
-    @GetMapping("/get-friends")
-    ResponseEntity<Object> getFriends(@RequestParam(value="uid") String uid, HttpSession session){
-        List<Friend> friends = friendRepo.findByUid(uid);
-        String[] friendIds = friends.stream().map(friend -> {
-            if(friend.getUser1().equals(session.getAttribute("uid").toString())){
-                return friend.getUser2();
-            }
-            return friend.getUser1();
-        }).toList().toArray(new String[friends.size()]);
+    @GetMapping(value = "/get-user-info-username", produces = "application/json")
+    public ResponseEntity<Object> getBasicUserInfoUsername(@RequestParam(value = "username") String username, HttpSession session) {
+        List<User> result = userRepo.findByUsername(username);
+        return new ResponseEntity<Object>(result, HttpStatus.OK);
+    }
 
+    @PostMapping(value = "/send-friend-request")
+    public ResponseEntity<Map<String, Boolean>> sendFriendRequest(@RequestBody UidObj otherUser, HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        String uid = session.getAttribute("uid").toString();
+        String otherUid = otherUser.getUid();
+
+        friendRepo.save(new Friend(uid, otherUid, false));
+        return new ResponseEntity<>(Collections.singletonMap("inserted", true), HttpStatus.OK);
+    }
+
+    @PutMapping(value="/accept-friend-request")
+    public ResponseEntity<Map<String, Boolean>> acceptFriendRequest(@RequestBody UidObj otherUser, HttpServletRequest request){
+        HttpSession session = request.getSession(false);
+        String uid = session.getAttribute("uid").toString();
+        String otherUid = otherUser.getUid();
+
+        friendRepo.acceptFriendRequest(uid, otherUid);
+        return new ResponseEntity<>(Collections.singletonMap("accepted", true), HttpStatus.OK);
+    }
+
+    @GetMapping("/get-friends")
+    ResponseEntity<Object> getFriends(HttpSession session){
+        String uid = session.getAttribute("uid").toString();
+        List<Friend> friends = friendRepo.findByUid(uid);
+
+        String[] friendIds = extractFriendId(friends, uid);
         List <User> friendList = userRepo.findByIds(friendIds);
 
         return new ResponseEntity<Object>(friendList,HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/get-incoming-friend-requests", produces = "application/json")
+    public ResponseEntity<Object> getIncomingFriendRequests(HttpSession session) {
+        String uid = session.getAttribute("uid").toString();
+        List<Friend> users = friendRepo.findIncomingRequestsById(uid);
+
+        String[] userIds = extractFriendId(users, uid);
+        List <User> incomingList = userRepo.findByIds(userIds);
+
+        return new ResponseEntity<Object>(incomingList, HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/get-outgoing-friend-requests", produces = "application/json")
+    public ResponseEntity<Object> getOutgoingFriendRequests(HttpSession session) {
+        String uid = session.getAttribute("uid").toString();
+        List<Friend> users = friendRepo.findOutgoingRequestsById(uid);
+
+        String[] userIds = extractFriendId(users, uid);
+        List <User> outgoingList = userRepo.findByIds(userIds);
+
+        return new ResponseEntity<Object>(outgoingList, HttpStatus.OK);
+    }
+
+    @PostMapping(value = "/remove-outgoing-friend-request")
+    public ResponseEntity<Map<String, Boolean>> removeOutgoingFriendRequest(@RequestBody UidObj otherUser, HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        String uid = session.getAttribute("uid").toString();
+        String otherUid = otherUser.getUid();
+
+        friendRepo.deleteOutgoingRequest(uid, otherUid);
+        return new ResponseEntity<>(Collections.singletonMap("removed", true), HttpStatus.OK);
+    }
+
+    @PostMapping(value = "/remove-incoming-friend-request")
+    public ResponseEntity<Map<String, Boolean>> removeIncomingFriendRequest(@RequestBody UidObj otherUser, HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        String uid = session.getAttribute("uid").toString();
+        String otherUid = otherUser.getUid();
+
+        friendRepo.deleteIncomingRequest(otherUid, uid);
+        return new ResponseEntity<>(Collections.singletonMap("removed", true), HttpStatus.OK);
     }
 
     @GetMapping("/check-username-available")
