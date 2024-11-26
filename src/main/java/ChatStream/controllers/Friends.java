@@ -55,36 +55,36 @@ public class Friends {
     }
 
     @GetMapping("/get-friends")
-    ResponseEntity<Object> getFriends(HttpSession session){
+    public ResponseEntity<Map<String, List<User>>> getFriends(HttpSession session){
         String uid = session.getAttribute("uid").toString();
         List<Friend> friends = friendRepo.findByUid(uid);
 
         String[] friendIds = extractFriendId(friends, uid);
         List <User> friendList = userRepo.findByIds(friendIds);
 
-        return new ResponseEntity<Object>(friendList,HttpStatus.OK);
+        return new ResponseEntity<>(Collections.singletonMap("friends", friendList), HttpStatus.OK);
     }
 
     @GetMapping(value = "/get-incoming-friend-requests", produces = "application/json")
-    public ResponseEntity<Object> getIncomingFriendRequests(HttpSession session) {
+    public ResponseEntity<Map<String, List<User>>> getIncomingFriendRequests(HttpSession session) {
         String uid = session.getAttribute("uid").toString();
         List<Friend> users = friendRepo.findIncomingRequestsById(uid);
 
         String[] userIds = extractFriendId(users, uid);
         List <User> incomingList = userRepo.findByIds(userIds);
 
-        return new ResponseEntity<Object>(incomingList, HttpStatus.OK);
+        return new ResponseEntity<>(Collections.singletonMap("incoming", incomingList), HttpStatus.OK);
     }
 
     @GetMapping(value = "/get-outgoing-friend-requests", produces = "application/json")
-    public ResponseEntity<Object> getOutgoingFriendRequests(HttpSession session) {
+    public ResponseEntity<Map<String, List<User>>> getOutgoingFriendRequests(HttpSession session) {
         String uid = session.getAttribute("uid").toString();
         List<Friend> users = friendRepo.findOutgoingRequestsById(uid);
 
         String[] userIds = extractFriendId(users, uid);
         List <User> outgoingList = userRepo.findByIds(userIds);
 
-        return new ResponseEntity<Object>(outgoingList, HttpStatus.OK);
+        return new ResponseEntity<>(Collections.singletonMap("outgoing", outgoingList), HttpStatus.OK);
     }
 
     @PostMapping(value = "/remove-outgoing-friend-request")
