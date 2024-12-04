@@ -24,9 +24,6 @@ import java.util.Map;
 public class UserController {
 
     @Autowired
-    FriendRepository friendRepo;
-
-    @Autowired
     UserRepository userRepo;
 
     public String hashPassword(String password) {
@@ -34,98 +31,16 @@ public class UserController {
         return passwordEncoder.encode(password);
     }
 
-    public String[] extractFriendId(List<Friend> friends, String uid){
-        return friends.stream().map(friend -> {
-            if(friend.getUser1().equals(uid)){
-                return friend.getUser2();
-            }
-            return friend.getUser1();
-        }).toList().toArray(new String[friends.size()]);
-    }
-
-    @GetMapping(value = "/get-user-info", produces = "application/json")
-    public ResponseEntity<Object> getBasicUserInfo(@RequestParam(value = "uids") String[] uids, HttpSession session) {
+    @GetMapping(value = "/get-user-info")
+    public ResponseEntity<Map<String, List<User>>> getBasicUserInfo(@RequestParam(value = "uids") String[] uids, HttpServletRequest request) {
         List<User> result = userRepo.findByIds(uids);
-        return new ResponseEntity<Object>(result, HttpStatus.OK);
+        return new ResponseEntity<>(Collections.singletonMap("uinfo", result), HttpStatus.OK);
     }
 
-    @GetMapping(value = "/get-user-info-username", produces = "application/json")
-    public ResponseEntity<Object> getBasicUserInfoUsername(@RequestParam(value = "username") String username, HttpSession session) {
+    @GetMapping(value = "/get-user-info-username")
+    public ResponseEntity<Map<String, List<User>>> getBasicUserInfoUsername(@RequestParam(value = "username") String username) {
         List<User> result = userRepo.findByUsername(username);
-        return new ResponseEntity<Object>(result, HttpStatus.OK);
-    }
-
-    @PostMapping(value = "/send-friend-request")
-    public ResponseEntity<Map<String, Boolean>> sendFriendRequest(@RequestBody UidObj otherUser, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        String uid = session.getAttribute("uid").toString();
-        String otherUid = otherUser.getUid();
-
-        friendRepo.save(new Friend(uid, otherUid, false));
-        return new ResponseEntity<>(Collections.singletonMap("inserted", true), HttpStatus.OK);
-    }
-
-    @PutMapping(value="/accept-friend-request")
-    public ResponseEntity<Map<String, Boolean>> acceptFriendRequest(@RequestBody UidObj otherUser, HttpServletRequest request){
-        HttpSession session = request.getSession(false);
-        String uid = session.getAttribute("uid").toString();
-        String otherUid = otherUser.getUid();
-
-        friendRepo.acceptFriendRequest(uid, otherUid);
-        return new ResponseEntity<>(Collections.singletonMap("accepted", true), HttpStatus.OK);
-    }
-
-    @GetMapping("/get-friends")
-    ResponseEntity<Object> getFriends(HttpSession session){
-        String uid = session.getAttribute("uid").toString();
-        List<Friend> friends = friendRepo.findByUid(uid);
-
-        String[] friendIds = extractFriendId(friends, uid);
-        List <User> friendList = userRepo.findByIds(friendIds);
-
-        return new ResponseEntity<Object>(friendList,HttpStatus.OK);
-    }
-
-    @GetMapping(value = "/get-incoming-friend-requests", produces = "application/json")
-    public ResponseEntity<Object> getIncomingFriendRequests(HttpSession session) {
-        String uid = session.getAttribute("uid").toString();
-        List<Friend> users = friendRepo.findIncomingRequestsById(uid);
-
-        String[] userIds = extractFriendId(users, uid);
-        List <User> incomingList = userRepo.findByIds(userIds);
-
-        return new ResponseEntity<Object>(incomingList, HttpStatus.OK);
-    }
-
-    @GetMapping(value = "/get-outgoing-friend-requests", produces = "application/json")
-    public ResponseEntity<Object> getOutgoingFriendRequests(HttpSession session) {
-        String uid = session.getAttribute("uid").toString();
-        List<Friend> users = friendRepo.findOutgoingRequestsById(uid);
-
-        String[] userIds = extractFriendId(users, uid);
-        List <User> outgoingList = userRepo.findByIds(userIds);
-
-        return new ResponseEntity<Object>(outgoingList, HttpStatus.OK);
-    }
-
-    @PostMapping(value = "/remove-outgoing-friend-request")
-    public ResponseEntity<Map<String, Boolean>> removeOutgoingFriendRequest(@RequestBody UidObj otherUser, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        String uid = session.getAttribute("uid").toString();
-        String otherUid = otherUser.getUid();
-
-        friendRepo.deleteOutgoingRequest(uid, otherUid);
-        return new ResponseEntity<>(Collections.singletonMap("removed", true), HttpStatus.OK);
-    }
-
-    @PostMapping(value = "/remove-incoming-friend-request")
-    public ResponseEntity<Map<String, Boolean>> removeIncomingFriendRequest(@RequestBody UidObj otherUser, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        String uid = session.getAttribute("uid").toString();
-        String otherUid = otherUser.getUid();
-
-        friendRepo.deleteIncomingRequest(otherUid, uid);
-        return new ResponseEntity<>(Collections.singletonMap("removed", true), HttpStatus.OK);
+        return new ResponseEntity<>(Collections.singletonMap("uinfo", result), HttpStatus.OK);
     }
 
     @GetMapping("/check-username-available")
@@ -164,12 +79,13 @@ public class UserController {
     }
 
     @PutMapping("/update-profile")
-    ResponseEntity<Map<String, String>> updateProfileInfo(@RequestBody NewUserInfo updatedInfo, HttpSession session) throws Exception{
+    ResponseEntity<Map<String, String>> updateProfileInfo(@RequestBody NewUserInfo updatedInfo, HttpServletRequest request) throws Exception{
         String new_username= updatedInfo.getUsername();
         String new_name = updatedInfo.getName();
         String oldPfp = updatedInfo.getOldPfp();
         String newPfp = updatedInfo.getNewPfp();
         String newPfpName = updatedInfo.getNewPfpName();
+        HttpSession session = request.getSession(false);
 
         if(newPfpName != null){
             // change pfp by deleting then inserting into bucket or webserver
@@ -185,13 +101,12 @@ public class UserController {
     }
 
     @PutMapping("/change-password")
-    ResponseEntity<Map<String, String>> updateProfileInfo(@RequestBody ForgotPWObj obj) {
+    ResponseEntity<Map<String, String>> updateUserPassword(@RequestBody ForgotPWObj obj) {
         String email = obj.getEmail();
         String password = obj.getPassword();
 
         userRepo.updatePasswordByEmail(email, hashPassword(password));
         return new ResponseEntity<>(Collections.singletonMap("updated", "true"), HttpStatus.OK);
-
     }
 
 }

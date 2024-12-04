@@ -1,11 +1,11 @@
 package ChatStream.controllers;
 
+import ChatStream.controllerObjects.CredentialsObj;
+import ChatStream.controllerObjects.LoginReturnedJson;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ChatStream.model.User;
@@ -13,46 +13,9 @@ import ChatStream.respository.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.apache.commons.text.RandomStringGenerator;
 
+import java.util.Collections;
 import java.util.List;
-
-class LoginReturnedJson{
-    String csrf;
-    String uid;
-    String pfp;
-    String username;
-    String name;
-
-    public LoginReturnedJson(String csrf, String uid, String pfp, String username, String name){
-        this.csrf = csrf;
-        this.uid = uid;
-        this.pfp = pfp;
-        this.username = username;
-        this.name = name;
-    }
-
-    // I NEED THIS OR ELSE I GET
-    //Resolved [org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class ChatStream.controllers.CsrfJson] with preset Content-Type 'null']
-    // https://stackoverflow.com/questions/63832966/httpmessagenotwritableexception-no-converter-for-with-preset-content-type
-    public String getCsrf() {
-        return this.csrf;
-    }
-
-    public String getUid() {
-        return this.uid;
-    }
-
-    public String getUsername(){
-        return this.username;
-    }
-
-    public String getPfp(){
-        return this.pfp;
-    }
-
-    public String getName(){
-        return this.name;
-    }
-}
+import java.util.Map;
 
 // The Greeting object must be converted to JSON. Thanks to Spring’s HTTP message converter support, you need not do this conversion manually.
 @RestController
@@ -64,30 +27,33 @@ public class Login {
     UserRepository userRepo;
 
     @GetMapping("/check-logged-in")
-    public boolean checkLoggedIn(HttpServletRequest request){
-        return !(request.getSession(false) == null); // this is accurate. checks if mongodb has your session
+    public ResponseEntity<Map<String, Boolean>> checkLoggedIn(HttpServletRequest request){
+        boolean sessionExists = !(request.getSession(false) == null); // this is accurate. checks if mongodb has your session
+        return new ResponseEntity<>(Collections.singletonMap("loggedIn", sessionExists), HttpStatus.OK);
     }
 
     @DeleteMapping("/logout")
-    public boolean logOut(HttpServletRequest request){
+    public ResponseEntity<Map<String, Boolean>> logOut(HttpServletRequest request){
         HttpSession session = request.getSession(false);
 
         if(session != null){
             session.invalidate();
         }
 
-        return true;
+        return new ResponseEntity<>(Collections.singletonMap("loggedOut", true), HttpStatus.OK);
     }
 
-    @GetMapping(value = "/check-credentials", produces = "application/json")
-    public ResponseEntity<Object> checkCredentials(@RequestParam(value = "username") String username, @RequestParam(value = "password") String password, HttpSession session, HttpServletResponse response) {
+    @PostMapping(value = "/check-credentials")
+    public ResponseEntity<LoginReturnedJson> checkCredentials(@RequestBody CredentialsObj credentials, HttpSession session) {
+        String username = credentials.getUsername();
+        String password = credentials.getPassword();
+
         List<User> result = userRepo.findByUsername(username);
-        HttpHeaders headers = new HttpHeaders();
 
         // username does not match an existing account
         if(result.isEmpty()){
             session.invalidate();
-            return new ResponseEntity<Object>(null, headers, HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(new LoginReturnedJson(), HttpStatus.UNAUTHORIZED);
         }
 
         // check if password is correct. Do not encrypt user inputted password
@@ -105,11 +71,11 @@ public class Login {
             User user = result.getFirst();
 
             LoginReturnedJson json = new LoginReturnedJson(randomLetters, result.getFirst().getId(), user.getPfp(), user.getUsername(), user.getName());
-            return new ResponseEntity<Object>(json, headers, HttpStatus.OK);
+            return new ResponseEntity<>(json, HttpStatus.OK);
         }
         else {
             session.invalidate();
-            return new ResponseEntity<Object>(null, headers, HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(new LoginReturnedJson(), HttpStatus.UNAUTHORIZED);
         }
     }
 }
