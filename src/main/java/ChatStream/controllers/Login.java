@@ -1,5 +1,6 @@
 package ChatStream.controllers;
 
+import ChatStream.controllerObjects.CredentialsObj;
 import ChatStream.controllerObjects.LoginReturnedJson;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -42,8 +43,11 @@ public class Login {
         return new ResponseEntity<>(Collections.singletonMap("loggedOut", true), HttpStatus.OK);
     }
 
-    @GetMapping(value = "/check-credentials")
-    public ResponseEntity<LoginReturnedJson> checkCredentials(@RequestParam(value = "username") String username, @RequestParam(value = "password") String password, HttpSession session) {
+    @PostMapping(value = "/check-credentials")
+    public ResponseEntity<LoginReturnedJson> checkCredentials(@RequestBody CredentialsObj credentials, HttpSession session) {
+        String username = credentials.getUsername();
+        String password = credentials.getPassword();
+
         List<User> result = userRepo.findByUsername(username);
 
         // username does not match an existing account
