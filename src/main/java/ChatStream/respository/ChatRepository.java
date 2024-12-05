@@ -21,4 +21,8 @@ public interface ChatRepository extends MongoRepository<Chat, String>{
     @Query("{'_id' : ?0}")
     @Update("{'$set': {'latestMessage.uid': '?1', 'latestMessage.message': '?2', 'latestMessage.messageId': '?3', lastUpdated: ?4}}")
     Integer updateLatestMessage(String id, String uid, String message, String messageId, Date lastUpdated);
+
+    @Query("{'_id' : ?0}")
+    @Update("{'$set': {'chatName':'?1'}}")
+    void updateChatName(String id, String chatName);
 }

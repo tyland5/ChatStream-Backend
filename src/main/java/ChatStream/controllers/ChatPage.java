@@ -173,4 +173,15 @@ public class ChatPage{
 
         return new ResponseEntity<>(Collections.singletonMap("messages", messages), HttpStatus.OK);
     }
+
+
+    // accepts chat id, chat name, and chat picture
+    @PutMapping("/update-gc-info")
+    public ResponseEntity<Map<String, Boolean>> updateGCInfo(@RequestBody ChatResponse chat){
+        String newChatName = chat.getChatName();
+        String chatId = chat.getId();
+        
+        chatRepo.updateChatName(chatId, newChatName);
+        return new ResponseEntity<>(Collections.singletonMap("updated", true), HttpStatus.OK);
+    }
 }
