@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,13 @@ public class UserController {
     public ResponseEntity<Map<String, List<User>>> getBasicUserInfo(@RequestParam(value = "uids") String[] uids, HttpServletRequest request) {
         List<User> result = userRepo.findByIds(uids);
         return new ResponseEntity<>(Collections.singletonMap("uinfo", result), HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/get-personal-info")
+    public ResponseEntity<Map<String, User>> getBasicUserInfo(HttpServletRequest request) {
+        String[] uid = {request.getSession(false).getAttribute("uid").toString()};
+        List<User> result = userRepo.findByIds(uid);
+        return new ResponseEntity<>(Collections.singletonMap("uinfo", result.getFirst()), HttpStatus.OK);
     }
 
     @GetMapping(value = "/get-user-info-username")

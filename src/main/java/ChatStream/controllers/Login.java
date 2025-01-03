@@ -26,9 +26,14 @@ public class Login {
     @Autowired
     UserRepository userRepo;
 
-    @GetMapping("/check-logged-in")
+    @PostMapping("/check-logged-in")
     public ResponseEntity<Map<String, Boolean>> checkLoggedIn(HttpServletRequest request){
-        boolean sessionExists = !(request.getSession(false) == null); // this is accurate. checks if mongodb has your session
+        boolean sessionExists = false;
+        HttpSession session = request.getSession(false); // this is accurate. checks if mongodb has your session
+
+        if(session != null){
+            sessionExists = request.getHeader("csrf").equals(request.getSession(false).getAttribute("csrf").toString());
+        }
         return new ResponseEntity<>(Collections.singletonMap("loggedIn", sessionExists), HttpStatus.OK);
     }
 

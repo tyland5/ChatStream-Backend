@@ -20,10 +20,11 @@ public class Chat {
     private String chatPic;
     private LatestMessage latestMessage;
     private Date lastUpdated;
+    private String [] hidden;
 
     public Chat(){}
 
-    public Chat(String id, List<String> members, String chatName, String chatPic, LatestMessage latestMessage, Date lastUpdated){
+    public Chat(String id, List<String> members, String chatName, String chatPic, LatestMessage latestMessage, Date lastUpdated, String hidden){
         this.id = id;
         this.members = members;
         this.chatName = chatName;
@@ -63,5 +64,9 @@ public class Chat {
 
     public Date getLastUpdated(){
         return this.lastUpdated;
+    }
+
+    public String[] getHidden() {
+        return this.hidden;
     }
 }

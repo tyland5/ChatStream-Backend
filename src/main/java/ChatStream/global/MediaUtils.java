@@ -25,7 +25,9 @@ public class MediaUtils {
     }
 
     public static String replaceLocal(String oldUrl, String newMedia, String newMediaName) throws Exception{
-        deleteLocal(oldUrl);
+        if(!oldUrl.isEmpty()) {
+            deleteLocal(oldUrl);
+        }
         return uploadLocal(newMedia,  newMediaName);
     }
 }
