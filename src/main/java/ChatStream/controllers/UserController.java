@@ -1,5 +1,6 @@
 package ChatStream.controllers;
 
+import ChatStream.cloudinary.CloudinaryServiceImpl;
 import ChatStream.controllerObjects.ForgotPWObj;
 import ChatStream.controllerObjects.NewUserInfo;
 import ChatStream.controllerObjects.UidObj;
@@ -26,6 +27,9 @@ public class UserController {
 
     @Autowired
     UserRepository userRepo;
+
+    @Autowired
+    private CloudinaryServiceImpl cloudinaryService;
 
     public String hashPassword(String password) {
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -97,7 +101,8 @@ public class UserController {
 
         if(newPfpName != null){
             // change pfp by deleting then inserting into bucket or webserver
-            String newPfpUrl = MediaUtils.replaceLocal(oldPfp, newPfp, newPfpName);
+            //String newPfpUrl = MediaUtils.replaceLocal(oldPfp, newPfp, newPfpName);
+            String newPfpUrl = cloudinaryService.replaceFile(oldPfp, newPfp, newPfpName, "pfp");
             userRepo.updateProfileWithPfp(session.getAttribute("uid").toString(), new_username, new_name, newPfpUrl);
             return new ResponseEntity<>(Collections.singletonMap("newPfpUrl", newPfpUrl), HttpStatus.OK);
         }

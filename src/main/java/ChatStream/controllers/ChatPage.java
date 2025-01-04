@@ -1,5 +1,6 @@
 package ChatStream.controllers;
 
+import ChatStream.cloudinary.CloudinaryServiceImpl;
 import ChatStream.controllerObjects.ChatResponse;
 import ChatStream.controllerObjects.MessageResponse;
 import ChatStream.controllerObjects.NewChatBody;
@@ -34,6 +35,9 @@ public class ChatPage{
     @Autowired
     MessageRepository messageRepo;
 
+    @Autowired
+    private CloudinaryServiceImpl cloudinaryService;
+
     @Value("${public.key}")
     private String publicKey;
 
@@ -64,7 +68,8 @@ public class ChatPage{
         if(type.equals("delete")) {
             // first delete media
             if(!mediaName.isEmpty()){
-                MediaUtils.deleteLocal(mediaName);
+                //MediaUtils.deleteLocal(mediaName);
+                cloudinaryService.deleteFile(mediaName, "images");
             }
 
             messageRepo.deleteByMessageId(id);
@@ -145,9 +150,9 @@ public class ChatPage{
         }
 
         if(!media.isBlank()) {
-            mediaName = MediaUtils.uploadLocal(media, mediaName);
+            //mediaName = MediaUtils.uploadLocal(media, mediaName);
+            mediaName = cloudinaryService.uploadFile(media, mediaName, "images");
         }
-
         String messageId = messageRepo.save(new Message(chatId, sender, encryptedMessage, sentAt, mediaName)).getId();
         chatRepo.updateLatestMessage(chatId, sender, message, messageId, sentAt); // will also need to modify this
 
