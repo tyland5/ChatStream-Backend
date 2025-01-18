@@ -21,7 +21,7 @@ public class Websocket implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/chatstream-websocket").setAllowedOrigins("http://localhost:4200");
+        registry.addEndpoint("/chatstream-websocket").setAllowedOrigins("*"); // allowed origins could be changed to firebase and local host only
     }
 
     @EventListener

@@ -13,6 +13,8 @@ public class SessionCookie {
         DefaultCookieSerializer serializer = new DefaultCookieSerializer();
         serializer.setCookieName("JSESSIONID");
         serializer.setCookiePath("/");
+        serializer.setSameSite("None"); // allows cookies to be set or sent from localhost or firebase. CSRF token prevents attacks
+        serializer.setUseSecureCookie(true); // only allow https connections
         serializer.setCookieMaxAge(604800); // cookie lives for a week, however if user is inactive for more than day, db deletes session
         return serializer;
     }

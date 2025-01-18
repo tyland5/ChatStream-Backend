@@ -44,6 +44,9 @@ public class ChatPage{
     @Value("${private.key}")
     private String privateKey;
 
+    @Value("${spring.profiles.active}")
+    private String environmentType;
+
     @GetMapping("/get-chatlist")
     public ResponseEntity<Map<String, List<Chat>>> getChatList(HttpServletRequest request){
         HttpSession session = request.getSession(false);
@@ -68,8 +71,12 @@ public class ChatPage{
         if(type.equals("delete")) {
             // first delete media
             if(!mediaName.isEmpty()){
-                //MediaUtils.deleteLocal(mediaName);
-                cloudinaryService.deleteFile(mediaName, "images");
+                if(environmentType.equals("dev")) {
+                    MediaUtils.deleteLocal(mediaName);
+                }
+                else {
+                    cloudinaryService.deleteFile(mediaName, "images");
+                }
             }
 
             messageRepo.deleteByMessageId(id);
@@ -150,8 +157,12 @@ public class ChatPage{
         }
 
         if(!media.isBlank()) {
-            //mediaName = MediaUtils.uploadLocal(media, mediaName);
-            mediaName = cloudinaryService.uploadFile(media, mediaName, "images");
+            if(environmentType.equals("dev")) {
+                mediaName = MediaUtils.uploadLocal(media, mediaName);
+            }
+            else{
+                mediaName = cloudinaryService.uploadFile(media, mediaName, "images");
+            }
         }
         String messageId = messageRepo.save(new Message(chatId, sender, encryptedMessage, sentAt, mediaName)).getId();
         chatRepo.updateLatestMessage(chatId, sender, message, messageId, sentAt); // will also need to modify this

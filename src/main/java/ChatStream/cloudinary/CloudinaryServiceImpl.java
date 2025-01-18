@@ -1,6 +1,7 @@
 package ChatStream.cloudinary;
 
 import com.cloudinary.Cloudinary;
+import com.cloudinary.Transformation;
 import com.cloudinary.utils.ObjectUtils;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ public class CloudinaryServiceImpl {
     public String uploadFile(String media, String mediaName, String folderName) {
         String base64Data = media.split(",")[1]; // Extract the base64 part
         byte[] decodedMediaBytes = Base64.getDecoder().decode(base64Data);
+
         // get rid of extension bc then it be like blah.jpg.jpg. need extension as part of name for local
         String newMediaName = mediaName.split("\\.")[0];
 
@@ -26,6 +28,7 @@ public class CloudinaryServiceImpl {
             HashMap<Object, Object> options = new HashMap<>();
             options.put("folder", folderName);
             options.put("public_id", newMediaName);
+            options.put("transformation", "q_auto"); // compress image before uploading
 
             Map uploadedFile = cloudinary.uploader().upload(decodedMediaBytes, options);
             String publicId = (String) uploadedFile.get("public_id");
