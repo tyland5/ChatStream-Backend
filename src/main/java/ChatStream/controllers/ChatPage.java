@@ -1,5 +1,6 @@
 package ChatStream.controllers;
 
+import ChatStream.cloudinary.CloudinaryServiceImpl;
 import ChatStream.controllerObjects.ChatResponse;
 import ChatStream.controllerObjects.MessageResponse;
 import ChatStream.controllerObjects.NewChatBody;
@@ -20,6 +21,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.web.bind.annotation.*;
 import ChatStream.model.LatestMessage;
+import ChatStream.controllerObjects.ChatHiddenObj;
 
 import java.util.*;
 
@@ -33,11 +35,17 @@ public class ChatPage{
     @Autowired
     MessageRepository messageRepo;
 
+    @Autowired
+    private CloudinaryServiceImpl cloudinaryService;
+
     @Value("${public.key}")
     private String publicKey;
 
     @Value("${private.key}")
     private String privateKey;
+
+    @Value("${spring.profiles.active}")
+    private String environmentType;
 
     @GetMapping("/get-chatlist")
     public ResponseEntity<Map<String, List<Chat>>> getChatList(HttpServletRequest request){
@@ -63,7 +71,12 @@ public class ChatPage{
         if(type.equals("delete")) {
             // first delete media
             if(!mediaName.isEmpty()){
-                MediaUtils.deleteLocal(mediaName);
+                if(environmentType.equals("dev")) {
+                    MediaUtils.deleteLocal(mediaName);
+                }
+                else {
+                    cloudinaryService.deleteFile(mediaName, "images");
+                }
             }
 
             messageRepo.deleteByMessageId(id);
@@ -102,6 +115,28 @@ public class ChatPage{
     }
 
 
+    @MessageMapping("/chat/updateGcInfo/{chatId}")
+    @SendTo("/chat/{chatId}")
+    public MessageResponse updateGcInfo(@RequestBody MessageResponse messageObj) throws Exception { //@RequestHeader("csrf") String csrf, HttpSession session
+        String type = messageObj.getType();
+        String sender = messageObj.getSender();
+        String chatId = messageObj.getChatId();
+        Date sentAt = new Date();
+
+        if(type.equals("leave")){
+            return new MessageResponse("", chatId, sender, "left the group chat", sentAt.getTime(), type);
+        }
+        //type is join
+        else if(type.equals("add")){
+            String addedUsersJsonString = messageObj.getMessage();
+            return new MessageResponse("", chatId, sender, addedUsersJsonString, sentAt.getTime(), type);
+        }
+        else{ //(type.equals("change name")){
+            String newChatName = messageObj.getMessage();
+            return new MessageResponse("", chatId, "", newChatName, sentAt.getTime(), type);
+        }
+    }
+
     @PostMapping("/create-new-message")
     public ResponseEntity<Map<String, MessageResponse>> createNewMessage(@RequestBody MessageResponse messageObj) throws Exception { //@RequestHeader("csrf") String csrf, HttpSession session
         String id = messageObj.getId();
@@ -122,9 +157,13 @@ public class ChatPage{
         }
 
         if(!media.isBlank()) {
-            mediaName = MediaUtils.uploadLocal(media, mediaName);
+            if(environmentType.equals("dev")) {
+                mediaName = MediaUtils.uploadLocal(media, mediaName);
+            }
+            else{
+                mediaName = cloudinaryService.uploadFile(media, mediaName, "images");
+            }
         }
-
         String messageId = messageRepo.save(new Message(chatId, sender, encryptedMessage, sentAt, mediaName)).getId();
         chatRepo.updateLatestMessage(chatId, sender, message, messageId, sentAt); // will also need to modify this
 
@@ -172,5 +211,69 @@ public class ChatPage{
         }
 
         return new ResponseEntity<>(Collections.singletonMap("messages", messages), HttpStatus.OK);
+    }
+
+
+    // accepts chat id, chat name, and chat picture
+    @PutMapping("/update-gc-info")
+    public ResponseEntity<Map<String, Boolean>> updateGCInfo(@RequestBody ChatResponse chat){
+        String newChatName = chat.getChatName();
+        String chatId = chat.getId();
+        
+        chatRepo.updateChatName(chatId, newChatName);
+        return new ResponseEntity<>(Collections.singletonMap("updated", true), HttpStatus.OK);
+    }
+
+    @PutMapping("/unset-hidden-chat")
+    public ResponseEntity<Map<String, Boolean>> unsetHiddenField(@RequestBody ChatHiddenObj chat){
+        String chatId = chat.getChatId();
+
+        chatRepo.unsetHidden(chatId);
+        return new ResponseEntity<>(Collections.singletonMap("updated", true), HttpStatus.OK);
+    }
+
+    @PutMapping("/set-hidden-chat")
+    public ResponseEntity<Map<String, Boolean>> setHiddenField(@RequestBody ChatHiddenObj chat){
+        String chatId = chat.getChatId();
+        String[] uids = chat.getUids();
+
+        chatRepo.setHidden(chatId, uids);
+        return new ResponseEntity<>(Collections.singletonMap("updated", true), HttpStatus.OK);
+    }
+
+    @PutMapping("/push-hidden-chat")
+    public ResponseEntity<Map<String, Boolean>> pushHiddenField(@RequestBody ChatHiddenObj chat, HttpServletRequest request){
+        String chatId = chat.getChatId();
+        String uid = request.getSession(false).getAttribute("uid").toString();
+
+        chatRepo.pushHidden(chatId, uid);
+        return new ResponseEntity<>(Collections.singletonMap("updated", true), HttpStatus.OK);
+    }
+
+    @PutMapping("/pull-hidden-chat")
+    public ResponseEntity<Map<String, Boolean>> pullHiddenField(@RequestBody ChatHiddenObj chat, HttpServletRequest request){
+        String chatId = chat.getChatId();
+        String uid = request.getSession(false).getAttribute("uid").toString();
+
+        chatRepo.pullHidden(chatId, uid);
+        return new ResponseEntity<>(Collections.singletonMap("updated", true), HttpStatus.OK);
+    }
+
+    @PutMapping("/leave-gc")
+    public ResponseEntity<Map<String, Boolean>> leaveGc(@RequestBody ChatHiddenObj chat, HttpServletRequest request){
+        String chatId = chat.getChatId();
+        String uid = request.getSession(false).getAttribute("uid").toString();
+
+        chatRepo.leaveGc(chatId, uid);
+        return new ResponseEntity<>(Collections.singletonMap("updated", true), HttpStatus.OK);
+    }
+
+    @PutMapping("/add-to-gc")
+    public ResponseEntity<Map<String, Boolean>> addToGc(@RequestBody ChatHiddenObj chat, HttpServletRequest request){
+        String chatId = chat.getChatId();
+        String[] uids = chat.getUids();
+
+        chatRepo.addToGc(chatId, uids);
+        return new ResponseEntity<>(Collections.singletonMap("updated", true), HttpStatus.OK);
     }
 }

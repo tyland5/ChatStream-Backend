@@ -1,5 +1,6 @@
 package ChatStream.controllers;
 
+import ChatStream.cloudinary.CloudinaryServiceImpl;
 import ChatStream.controllerObjects.ForgotPWObj;
 import ChatStream.controllerObjects.NewUserInfo;
 import ChatStream.controllerObjects.UidObj;
@@ -11,11 +12,13 @@ import ChatStream.respository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +29,12 @@ public class UserController {
     @Autowired
     UserRepository userRepo;
 
+    @Autowired
+    private CloudinaryServiceImpl cloudinaryService;
+
+    @Value("${spring.profiles.active}")
+    private String environmentType;
+
     public String hashPassword(String password) {
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         return passwordEncoder.encode(password);
@@ -35,6 +44,13 @@ public class UserController {
     public ResponseEntity<Map<String, List<User>>> getBasicUserInfo(@RequestParam(value = "uids") String[] uids, HttpServletRequest request) {
         List<User> result = userRepo.findByIds(uids);
         return new ResponseEntity<>(Collections.singletonMap("uinfo", result), HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/get-personal-info")
+    public ResponseEntity<Map<String, User>> getBasicUserInfo(HttpServletRequest request) {
+        String[] uid = {request.getSession(false).getAttribute("uid").toString()};
+        List<User> result = userRepo.findByIds(uid);
+        return new ResponseEntity<>(Collections.singletonMap("uinfo", result.getFirst()), HttpStatus.OK);
     }
 
     @GetMapping(value = "/get-user-info-username")
@@ -89,7 +105,15 @@ public class UserController {
 
         if(newPfpName != null){
             // change pfp by deleting then inserting into bucket or webserver
-            String newPfpUrl = MediaUtils.replaceLocal(oldPfp, newPfp, newPfpName);
+            String newPfpUrl = "";
+
+            if(environmentType.equals("dev")) {
+                newPfpUrl = MediaUtils.replaceLocal(oldPfp, newPfp, newPfpName);
+            }
+            else{
+                newPfpUrl = cloudinaryService.replaceFile(oldPfp, newPfp, newPfpName, "pfp");
+            }
+
             userRepo.updateProfileWithPfp(session.getAttribute("uid").toString(), new_username, new_name, newPfpUrl);
             return new ResponseEntity<>(Collections.singletonMap("newPfpUrl", newPfpUrl), HttpStatus.OK);
         }

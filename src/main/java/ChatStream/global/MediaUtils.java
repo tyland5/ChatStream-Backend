@@ -1,11 +1,11 @@
 package ChatStream.global;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
 
 public class MediaUtils {
+
     public static String uploadLocal(String media, String mediaName) throws Exception{
         String base64Data = media.split(",")[1]; // Extract the base64 part
         byte[] decodedMediaBytes = Base64.getDecoder().decode(base64Data);
@@ -25,7 +25,9 @@ public class MediaUtils {
     }
 
     public static String replaceLocal(String oldUrl, String newMedia, String newMediaName) throws Exception{
-        deleteLocal(oldUrl);
+        if(!oldUrl.isEmpty()) {
+            deleteLocal(oldUrl);
+        }
         return uploadLocal(newMedia,  newMediaName);
     }
 }
